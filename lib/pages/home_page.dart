@@ -11,6 +11,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  TextEditingController search = TextEditingController();
+  String searchOrder = '';
+
   @override
   Widget build(BuildContext context) {
     // final Stream<QuerySnapshot> _ordersStream =
@@ -19,40 +22,72 @@ class _HomePageState extends State<HomePage> {
 
     CollectionReference ordersReference = firestore.collection('orders');
 
+    getAllOrders() {
+      ordersReference.where('orderID', isEqualTo: '743931').snapshots();
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Golekos Admin'),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: ordersReference.snapshots(),
-        builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-          if (snapshot.hasError) {
-            return Text('Something went wrong');
-          }
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            TextField(
+              controller: search,
+              onChanged: (value) {
+                setState(() {
+                  searchOrder = value;
+                });
+              },
+              decoration: InputDecoration(
+                hintText: 'Input order',
+                contentPadding: EdgeInsets.all(15),
+                prefix: Text('#'),
+              ),
+            ),
+            SizedBox(
+              height: 15,
+            ),
+            StreamBuilder<QuerySnapshot>(
+              stream: (searchOrder.isEmpty)
+                  ? ordersReference.snapshots()
+                  : ordersReference
+                      .where('orderID', isEqualTo: searchOrder)
+                      .snapshots(),
+              builder: (BuildContext context,
+                  AsyncSnapshot<QuerySnapshot> snapshot) {
+                if (snapshot.hasError) {
+                  return Text('Something went wrong');
+                }
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
 
-          if (!(snapshot.hasData)) {
-            return Center(
-              child: Text('No data here'),
-            );
-          }
+                if (!(snapshot.hasData)) {
+                  return Center(
+                    child: Text('No data here'),
+                  );
+                }
 
-          return ListView(
-            shrinkWrap: true,
-            children: snapshot.data!.docs.map((e) {
-              Map<String, dynamic> data = e.data() as Map<String, dynamic>;
-              return CardTile(
-                id: e.id,
-                data: data,
-              );
-            }).toList(),
-          );
-        },
+                return ListView(
+                  shrinkWrap: true,
+                  children: snapshot.data!.docs.map((e) {
+                    Map<String, dynamic> data =
+                        e.data() as Map<String, dynamic>;
+                    return CardTile(
+                      id: e.id,
+                      data: data,
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
